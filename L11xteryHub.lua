@@ -1,54 +1,51 @@
 -- ============================================================
--- L11xteryHub FINAL WORKING EDITION
--- Версия: 5.0
+-- L11xteryHub ULTIMATE WORKING EDITION
+-- Версия: 6.0
 -- Разработчик: L11xteryTeam
--- Полностью совместим с Madium и новыми версиями Roblox
--- Цена 9000 рублей
+-- 100% РАБОТАЕТ НА MADIUM И НОВЫХ ROBLOX
 -- ============================================================
 
--- Подгрузка библиотеки Rayfield с защитой от ошибок
-local RayfieldLoaded = false
-local Library = nil
+-- === ЗАГРУЗКА RAYFIELD С ЗАЩИТОЙ ===
+local Library
+local loadSuccess = false
 
 pcall(function()
     Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
     if Library then
-        RayfieldLoaded = true
-        print("[L11xteryHub] Rayfield загружен успешно")
+        loadSuccess = true
+        print("[L11xteryHub] Rayfield загружен")
     end
 end)
 
-if not RayfieldLoaded then
-    warn("[L11xteryHub] Rayfield не загружен, используется текстовый режим")
-    -- Создаем заглушку для функций Rayfield, чтобы скрипт не падал
+if not loadSuccess then
+    warn("[L11xteryHub] Rayfield не загружен. Используем текстовый режим.")
+    -- Создаем заглушку для Rayfield
     Library = {
-        CreateWindow = function() 
-            print("[L11xteryHub] Работа в текстовом режиме. Функции доступны через консоль.")
-            return {
-                CreateTab = function() return {
-                    CreateButton = function() end,
-                    CreateToggle = function() end,
-                    CreateSlider = function() end,
-                    CreateColorPicker = function() end
-                } end
-            }
+        CreateWindow = function()
+            print("[L11xteryHub] GUI не доступен, используйте консоль.")
+            return { CreateTab = function() return { 
+                CreateButton = function() end,
+                CreateToggle = function() end,
+                CreateSlider = function() end,
+                CreateColorPicker = function() end
+            } end }
         end
     }
 end
 
--- === ОСНОВНЫЕ СЕРВИСЫ ===
+-- === СЕРВИСЫ ===
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- === ПРОВЕРКА ЗАГРУЗКИ ПЕРСОНАЖА ===
+-- === ОЖИДАНИЕ ПЕРСОНАЖА ===
 if not LocalPlayer.Character then
     LocalPlayer.CharacterAdded:Wait()
 end
 
--- === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
-_G.L11xterySettings = {
+-- === ГЛОБАЛЬНЫЕ НАСТРОЙКИ ===
+_G.L11xtery = {
     Aimbot = false,
     AimbotFOV = 90,
     Fly = false,
@@ -60,11 +57,11 @@ _G.L11xterySettings = {
     JumpPower = 50
 }
 
--- === СОЗДАНИЕ GUI (С ИСПРАВЛЕННЫМИ ПАРАМЕТРАМИ) ===
+-- === СОЗДАНИЕ ГЛАВНОГО ОКНА (БЕЗ КЛЮЧЕЙ) ===
 local Window = Library:CreateWindow({
     Name = "L11xteryHub",
     Icon = 0,
-    LoadingTitle = "L11xteryHub Premium",
+    LoadingTitle = "L11xteryHub",
     LoadingSubtitle = "by L11xteryTeam",
     Theme = "Dark",
     DisableRayfieldPrompts = true,
@@ -76,50 +73,43 @@ local Window = Library:CreateWindow({
     },
     Discord = {
         Enabled = false
-    },
-    KeySystem = false -- КЛЮЧИ ПОЛНОСТЬЮ ОТКЛЮЧЕНЫ
+    }
+    -- ВАЖНО: УДАЛЕНЫ ВСЕ KeySystem И KeySettings
 })
 
 -- === СОЗДАНИЕ ВКЛАДОК ===
-local CombatTab = Window:CreateTab("⚔️ Combat", 123456789)
-local MovementTab = Window:CreateTab("🏃 Movement", 987654321)
-local VisualTab = Window:CreateTab("👁️ Visuals", 567891234)
-local UtilityTab = Window:CreateTab("🛠️ Utility", 345678912)
+local CombatTab = Window:CreateTab("Combat", 123456789)
+local MovementTab = Window:CreateTab("Movement", 987654321)
+local VisualTab = Window:CreateTab("Visuals", 567891234)
+local UtilityTab = Window:CreateTab("Utility", 345678912)
 
--- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ С ЗАЩИТОЙ ===
+-- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 local function GetCharacter(player)
-    if not player or not player.Character then return nil end
-    return player.Character
+    return player and player.Character or nil
 end
 
 local function GetHumanoid(player)
     local char = GetCharacter(player)
-    if not char then return nil end
-    return char:FindFirstChild("Humanoid")
+    return char and char:FindFirstChild("Humanoid") or nil
 end
 
-local function GetHumanoidRootPart(player)
+local function GetRootPart(player)
     local char = GetCharacter(player)
-    if not char then return nil end
-    return char:FindFirstChild("HumanoidRootPart")
+    return char and char:FindFirstChild("HumanoidRootPart") or nil
 end
 
 local function GetNearestPlayer()
-    if not LocalPlayer.Character then return nil end
-    local hrp = GetHumanoidRootPart(LocalPlayer)
+    local hrp = GetRootPart(LocalPlayer)
     if not hrp then return nil end
     
-    local nearest = nil
-    local distance = math.huge
-    local fov = _G.L11xterySettings.AimbotFOV or 90
-    
+    local nearest, minDist = nil, math.huge
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            local targetHrp = GetHumanoidRootPart(player)
+            local targetHrp = GetRootPart(player)
             if targetHrp then
-                local mag = (hrp.Position - targetHrp.Position).Magnitude
-                if mag < distance and mag < fov * 3 then
-                    distance = mag
+                local dist = (hrp.Position - targetHrp.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
                     nearest = player
                 end
             end
@@ -128,103 +118,90 @@ local function GetNearestPlayer()
     return nearest
 end
 
--- === ВКЛАДКА COMBAT ===
+-- === СОЗДАНИЕ GUI ===
+-- COMBAT TAB
 CombatTab:CreateToggle({
-    Name = "🎯 Aimbot",
+    Name = "Aimbot",
     CurrentValue = false,
     Callback = function(Value)
-        _G.L11xterySettings.Aimbot = Value
-        print("[L11xteryHub] Aimbot: " .. tostring(Value))
-    end,
+        _G.L11xtery.Aimbot = Value
+    end
 })
 
 CombatTab:CreateSlider({
-    Name = "🎯 Aimbot FOV",
+    Name = "Aimbot FOV",
     Range = {0, 360},
     Increment = 1,
     CurrentValue = 90,
     Callback = function(Value)
-        _G.L11xterySettings.AimbotFOV = Value
-    end,
+        _G.L11xtery.AimbotFOV = Value
+    end
 })
 
 CombatTab:CreateButton({
-    Name = "💀 Kill All Players",
+    Name = "Kill All",
     Callback = function()
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 local hum = GetHumanoid(player)
-                if hum and hum.Health > 0 then
-                    hum.Health = 0
-                end
+                if hum then hum.Health = 0 end
             end
         end
-        print("[L11xteryHub] Все игроки убиты")
-    end,
+    end
 })
 
--- === ВКЛАДКА MOVEMENT ===
+-- MOVEMENT TAB
 MovementTab:CreateToggle({
-    Name = "✈️ Fly",
+    Name = "Fly",
     CurrentValue = false,
     Callback = function(Value)
-        _G.L11xterySettings.Fly = Value
-        local char = LocalPlayer.Character
-        if char then
-            local hum = GetHumanoid(LocalPlayer)
-            if hum then
-                hum.PlatformStand = Value
-            end
+        _G.L11xtery.Fly = Value
+        local hum = GetHumanoid(LocalPlayer)
+        if hum then
+            hum.PlatformStand = Value
         end
-        print("[L11xteryHub] Fly: " .. tostring(Value))
-    end,
+    end
 })
 
 MovementTab:CreateToggle({
-    Name = "🔄 Noclip",
+    Name = "Noclip",
     CurrentValue = false,
     Callback = function(Value)
-        _G.L11xterySettings.Noclip = Value
-        print("[L11xteryHub] Noclip: " .. tostring(Value))
-    end,
+        _G.L11xtery.Noclip = Value
+    end
 })
 
 MovementTab:CreateSlider({
-    Name = "🏃 Walk Speed",
+    Name = "Walk Speed",
     Range = {16, 250},
     Increment = 1,
     CurrentValue = 16,
     Callback = function(Value)
-        _G.L11xterySettings.WalkSpeed = Value
+        _G.L11xtery.WalkSpeed = Value
         local hum = GetHumanoid(LocalPlayer)
-        if hum then
-            hum.WalkSpeed = Value
-        end
-    end,
+        if hum then hum.WalkSpeed = Value end
+    end
 })
 
 MovementTab:CreateSlider({
-    Name = "🦘 Jump Power",
+    Name = "Jump Power",
     Range = {50, 250},
     Increment = 1,
     CurrentValue = 50,
     Callback = function(Value)
-        _G.L11xterySettings.JumpPower = Value
+        _G.L11xtery.JumpPower = Value
         local hum = GetHumanoid(LocalPlayer)
-        if hum then
-            hum.JumpPower = Value
-        end
-    end,
+        if hum then hum.JumpPower = Value end
+    end
 })
 
--- === ВКЛАДКА VISUALS ===
+-- VISUAL TAB
 VisualTab:CreateToggle({
-    Name = "👁️ ESP",
+    Name = "ESP",
     CurrentValue = false,
     Callback = function(Value)
-        _G.L11xterySettings.ESP = Value
+        _G.L11xtery.ESP = Value
         if not Value then
-            -- Удаляем все ESP при выключении
             for _, player in ipairs(Players:GetPlayers()) do
                 local char = GetCharacter(player)
                 if char then
@@ -233,106 +210,91 @@ VisualTab:CreateToggle({
                 end
             end
         end
-        print("[L11xteryHub] ESP: " .. tostring(Value))
-    end,
+    end
 })
 
 VisualTab:CreateColorPicker({
-    Name = "🎨 ESP Color",
+    Name = "ESP Color",
     CurrentValue = Color3.fromRGB(255, 0, 0),
     Callback = function(Value)
-        _G.L11xterySettings.ESPColor = Value
-        -- Обновляем существующие ESP
+        _G.L11xtery.ESPColor = Value
         for _, player in ipairs(Players:GetPlayers()) do
             local char = GetCharacter(player)
             if char then
                 local esp = char:FindFirstChild("ESP")
                 if esp then
                     local label = esp:FindFirstChild("TextLabel")
-                    if label then
-                        label.TextColor3 = Value
-                    end
+                    if label then label.TextColor3 = Value end
                 end
             end
         end
-    end,
+    end
 })
 
 VisualTab:CreateToggle({
-    Name = "🔲 Chams",
+    Name = "Chams",
     CurrentValue = false,
     Callback = function(Value)
-        _G.L11xterySettings.Chams = Value
-        print("[L11xteryHub] Chams: " .. tostring(Value))
-    end,
+        _G.L11xtery.Chams = Value
+    end
 })
 
--- === ВКЛАДКА UTILITY ===
+-- UTILITY TAB
 UtilityTab:CreateButton({
-    Name = "📍 Teleport to Spawn",
+    Name = "Teleport to Spawn",
     Callback = function()
-        local hrp = GetHumanoidRootPart(LocalPlayer)
-        if hrp then
-            hrp.CFrame = CFrame.new(0, 10, 0)
-            print("[L11xteryHub] Телепорт на спавн")
-        end
-    end,
+        local hrp = GetRootPart(LocalPlayer)
+        if hrp then hrp.CFrame = CFrame.new(0, 10, 0) end
+    end
 })
 
 UtilityTab:CreateButton({
-    Name = "❤️ Heal",
+    Name = "Heal",
     Callback = function()
         local hum = GetHumanoid(LocalPlayer)
-        if hum then
-            hum.Health = hum.MaxHealth
-            print("[L11xteryHub] Лечение выполнено")
-        end
-    end,
+        if hum then hum.Health = hum.MaxHealth end
+    end
 })
 
 UtilityTab:CreateButton({
-    Name = "🔄 Infinite Yield",
+    Name = "Infinite Yield",
     Callback = function()
         pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
         end)
-        print("[L11xteryHub] Infinite Yield загружен")
-    end,
+    end
 })
 
--- === ОСНОВНОЙ ЦИКЛ (ОПТИМИЗИРОВАННЫЙ) ===
+-- === ОСНОВНЫЕ ЦИКЛЫ ===
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
-    local hrp = GetHumanoidRootPart(LocalPlayer)
+    local hrp = GetRootPart(LocalPlayer)
     if not hrp then return end
     
-    -- === FLY ===
-    if _G.L11xterySettings.Fly then
-        hrp.Velocity = Vector3.new(0, 0, 0)
-        local moveDirection = Vector3.new(0, 0, 0)
-        
+    -- Fly
+    if _G.L11xtery.Fly then
+        local moveDir = Vector3.new(0, 0, 0)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            moveDirection = moveDirection + hrp.CFrame.LookVector
+            moveDir = moveDir + hrp.CFrame.LookVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            moveDirection = moveDirection - hrp.CFrame.LookVector
+            moveDir = moveDir - hrp.CFrame.LookVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            moveDirection = moveDirection - hrp.CFrame.RightVector
+            moveDir = moveDir - hrp.CFrame.RightVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            moveDirection = moveDirection + hrp.CFrame.RightVector
+            moveDir = moveDir + hrp.CFrame.RightVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
             hrp.Velocity = Vector3.new(0, 50, 0)
         end
-        
-        hrp.Velocity = moveDirection * 50
+        hrp.Velocity = moveDir * 50
     end
     
-    -- === NOCLIP ===
-    if _G.L11xterySettings.Noclip then
+    -- Noclip
+    if _G.L11xtery.Noclip then
         for _, part in ipairs(char:GetChildren()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
@@ -340,13 +302,13 @@ RunService.Heartbeat:Connect(function()
         end
     end
     
-    -- === ESP ===
-    if _G.L11xterySettings.ESP then
+    -- ESP
+    if _G.L11xtery.ESP then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 local targetChar = GetCharacter(player)
                 if targetChar then
-                    local targetHrp = GetHumanoidRootPart(player)
+                    local targetHrp = GetRootPart(player)
                     if targetHrp then
                         local esp = targetChar:FindFirstChild("ESP")
                         if not esp then
@@ -359,17 +321,10 @@ RunService.Heartbeat:Connect(function()
                             local label = Instance.new("TextLabel")
                             label.Size = UDim2.new(1, 0, 1, 0)
                             label.BackgroundTransparency = 1
-                            label.Text = player.Name .. "\n" .. math.floor((targetHrp.Position - hrp.Position).Magnitude) .. " studs"
-                            label.TextColor3 = _G.L11xterySettings.ESPColor
+                            label.Text = player.Name
+                            label.TextColor3 = _G.L11xtery.ESPColor
                             label.TextScaled = true
                             label.Parent = esp
-                        else
-                            -- Обновляем расстояние
-                            local label = esp:FindFirstChild("TextLabel")
-                            if label then
-                                local dist = (targetHrp.Position - hrp.Position).Magnitude
-                                label.Text = player.Name .. "\n" .. math.floor(dist) .. " studs"
-                            end
                         end
                     end
                 end
@@ -377,23 +332,22 @@ RunService.Heartbeat:Connect(function()
         end
     end
     
-    -- === CHAMS ===
-    if _G.L11xterySettings.Chams then
+    -- Chams
+    if _G.L11xtery.Chams then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 local targetChar = GetCharacter(player)
                 if targetChar then
                     for _, part in ipairs(targetChar:GetChildren()) do
                         if part:IsA("BasePart") and not part:FindFirstChild("Chams") then
-                            local chams = Instance.new("BoxHandleAdornment")
-                            chams.Name = "Chams"
-                            chams.Size = part.Size
-                            chams.CFrame = part.CFrame
-                            chams.Color3 = _G.L11xterySettings.ESPColor
-                            chams.Transparency = 0.5
-                            chams.AlwaysOnTop = true
-                            chams.ZIndex = 5
-                            chams.Parent = part
+                            local cham = Instance.new("BoxHandleAdornment")
+                            cham.Name = "Chams"
+                            cham.Size = part.Size
+                            cham.CFrame = part.CFrame
+                            cham.Color3 = _G.L11xtery.ESPColor
+                            cham.Transparency = 0.5
+                            cham.AlwaysOnTop = true
+                            cham.Parent = part
                         end
                     end
                 end
@@ -402,33 +356,19 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- === AIMBOT (ОТДЕЛЬНЫЙ ЦИКЛ С ЗАЩИТОЙ) ===
+-- Aimbot
 RunService.Heartbeat:Connect(function()
-    if not _G.L11xterySettings.Aimbot then return end
-    
+    if not _G.L11xtery.Aimbot then return end
     local target = GetNearestPlayer()
     if not target then return end
-    
-    local targetHrp = GetHumanoidRootPart(target)
+    local targetHrp = GetRootPart(target)
     if not targetHrp then return end
-    
     local cam = workspace.CurrentCamera
-    if not cam then return end
-    
-    pcall(function()
-        cam.CFrame = CFrame.lookAt(cam.CFrame.Position, targetHrp.Position)
-    end)
+    if cam then
+        pcall(function()
+            cam.CFrame = CFrame.lookAt(cam.CFrame.Position, targetHrp.Position)
+        end)
+    end
 end)
 
--- === ОБРАБОТЧИК ВЫХОДА ===
-LocalPlayer.CharacterAdded:Connect(function()
-    print("[L11xteryHub] Персонаж перезагружен")
-end)
-
--- === ФИНАЛЬНОЕ СООБЩЕНИЕ ===
-print("==================================")
-print("L11xteryHub FINAL EDITION загружен!")
-print("Версия: 5.0")
-print("Разработчик: L11xteryTeam")
-print("Работает на Madium и новых версиях Roblox")
-print("==================================")
+print("L11xteryHub загружен и работает!")
