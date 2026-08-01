@@ -1,5 +1,5 @@
 -- ============================================================
--- L11xteryTeamHub — ULTIMATE EDITION
+-- L11xteryTeamHub — ULTIMATE EDITION (NO NICK CHECK)
 -- Разработчик: L11xteryTeam
 -- Цена: 9000₽
 -- Telegram: https://t.me/L11xteryTeam
@@ -12,43 +12,13 @@ local PlayerName = LocalPlayer.Name
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
--- === РАЗРЕШЁННЫЕ НИКИ ===
-local ALLOWED_USERNAMES = {
-    "Yrdhhdbxxnvdb",
-    "IWANTTODle"
-}
+-- === УДАЛЁН БЛОК С РАЗРЕШЁННЫМИ НИКАМИ ===
+-- Больше нет ALLOWED_USERNAMES и функции IsUsernameAllowed
 
--- === ПРОВЕРКА НИКА ===
-local function IsUsernameAllowed(username)
-    for _, allowed in ipairs(ALLOWED_USERNAMES) do
-        if username == allowed then
-            return true
-        end
-    end
-    return false
-end
+-- === УДАЛЁН КИК ПРИ НЕВЕРНОМ НИКЕ ===
+-- Весь блок с условием if not IsUsernameAllowed(PlayerName) then ... end УДАЛЁН
 
--- === КИК ПРИ НЕВЕРНОМ НИКЕ ===
-if not IsUsernameAllowed(PlayerName) then
-    local kickMsg = "[L11xteryTeamHub] Access Denied. Username not authorized."
-    print(kickMsg)
-    warn(kickMsg)
-
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local event = ReplicatedStorage:FindFirstChild("BackdoorEvent")
-    if event then event:Destroy() end
-
-    local scriptObj = getfenv(0).script
-    if scriptObj then scriptObj:Destroy() end
-
-    _G.L11xteryKey = nil
-    _G.HubKey = nil
-
-    LocalPlayer:Kick(kickMsg)
-    return
-end
-
-print("[L11xteryTeamHub] Username verified: " .. PlayerName)
+print("[L11xteryTeamHub] Loaded for user: " .. PlayerName .. " (no nick check)")
 
 -- === КЛЮЧ ===
 local MASTER_KEY = "L11xteryHub"
@@ -138,18 +108,13 @@ local COLORS = {
     Text = Color3.fromRGB(255, 255, 255)     -- Белый
 }
 
--- === КОСТЫЛЬ ДЛЯ КАСТОМНОЙ ТЕМЫ (Rayfield не поддерживает кастомные цвета напрямую, используем обход) ===
--- В Rayfield тема задаётся строкой, но мы можем переопределить через StyleSheet (если есть доступ)
--- Вместо этого используем стандартную тему "Default", но с модификацией через CSS (недоступно)
--- Поэтому мы создаём визуальный эффект через отдельные элементы (кнопки, рамки)
-
 -- === GUI С КАСТОМНЫМ ОКНОМ КЛЮЧА ===
 local Window = Rayfield:CreateWindow({
     Name = "L11xteryTeamHub",
-    Icon = 0, -- Будет заменено позже
+    Icon = 0,
     LoadingTitle = "L11xteryTeamHub",
     LoadingSubtitle = "Enter Key to Continue",
-    Theme = "Default", -- Стандартная тема, но мы переопределим визуально
+    Theme = "Default",
     DisableRayfieldPrompts = false,
     DisableBuildWarnings = false,
     ConfigurationSaving = {
@@ -176,7 +141,7 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
--- === ДОБАВЛЯЕМ КОТА СО СЛЮНОЙ (используем ImageLabel через ScreenGui) ===
+-- === ДОБАВЛЯЕМ КОТА СО СЛЮНОЙ ===
 local function AddCatImage()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     local catGui = Instance.new("ScreenGui")
@@ -254,21 +219,20 @@ local function WaitForKeyActivation()
         if _G.L11xteryKey == MASTER_KEY and not keyActivated then
             keyActivated = true
             SetBackgroundAfterActivation()
-            -- Удаляем старую иконку L (она больше не нужна)
+            -- Удаляем старую иконку L
             local iconGui = LocalPlayer.PlayerGui:FindFirstChild("IconL")
             if iconGui then iconGui:Destroy() end
         end
     end
 
-    -- Проверяем каждые 0.5 секунды
-    game:GetService("RunService").Heartbeat:Connect(function()
+    RunService.Heartbeat:Connect(function()
         CheckKey()
     end)
 end
 
 WaitForKeyActivation()
 
--- === ОСНОВНЫЕ ВКЛАДКИ (ПОМЕНЯЛИ МЕСТАМИ: теперь Misc на первом месте) ===
+-- === ОСНОВНЫЕ ВКЛАДКИ ===
 local MiscTab = Window:CreateTab("Misc", 987654321)
 local PlayerTab = Window:CreateTab("Players", 123456789)
 local MainTab = Window:CreateTab("Main", 448336245)
@@ -329,4 +293,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[L11xteryTeamHub] Loaded for user: " .. PlayerName)
+print("[L11xteryTeamHub] Fully loaded for: " .. PlayerName)
